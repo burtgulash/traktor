@@ -62,3 +62,4 @@ def test_timer_function_call():
         pass
 
     assert True
+
