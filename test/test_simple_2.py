@@ -3,7 +3,7 @@
 import queue
 
 from traktor.aobject import AObject
-from traktor.container import Done, LoopContainer
+from traktor.container import Done, LoopContainer, TimerContainer
 
 
 class OOO(AObject):
@@ -41,3 +41,23 @@ def test_loop_function_call():
 
     assert True
 
+
+def test_timer_function_call():
+    obj = OOO()
+
+    con = TimerContainer()
+    obj.start(con)
+
+    obj.tryit(1337)
+    obj.finish(_delay=.5)
+
+    wait = queue.Queue()
+    con.spawn(wait)
+
+    try:
+        container, result = wait.get()
+        raise result
+    except Done:
+        pass
+
+    assert True

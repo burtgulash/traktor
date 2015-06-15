@@ -1,6 +1,8 @@
 import collections
+import heapq
 import queue
 import threading
+import time
 
 
 class SkipQueue(queue.Queue):
@@ -12,16 +14,16 @@ class SkipQueue(queue.Queue):
         super().__init__()
         self.queue = collections.deque()
 
-    def enqueue(self, x, urgent=False):
-        item = x, urgent
+    def enqueue(self, x, skip=False):
+        item = x, skip
         self.put(item)
 
     def dequeue(self, block=True, timeout=None):
         return self.get(block, timeout)
 
     def _put(self, item):
-        x, urgent = item
-        if urgent:
+        x, skip = item
+        if skip:
             self.queue.appendleft(x)
         else:
             self.queue.append(x)
@@ -36,7 +38,7 @@ class TimedQueue(SkipQueue):
 
     def enqueue(self, x, delay=0):
         deadline = time.time() + delay
-        super().enqueue((deadline, delay, x), urgent=delay > 0)
+        super().enqueue((deadline, delay, x), skip=delay > 0)
 
     def dequeue(self, block=True, timeout=None):
         while True:
@@ -105,8 +107,11 @@ class Container:
         wait.put((self, result))
 
     def invoke(self, function, *a, **k):
-        event = function, a, k
+        event = self._make_event(function, *a, **k)
         self._queue.enqueue(event)
+
+    def _make_event(self, function, *a, **k):
+        return function, a, k
 
     def _react(self):
         event = self._queue.dequeue()
@@ -130,4 +135,20 @@ class LoopContainer(Container):
         self.__running = True
         while self.__running:
             super()._react()
+
+
+class TimerContainer(LoopContainer):
+
+    def _make_queue(self):
+        return TimedQueue()
+
+    def invoke(self, function, *a, _delay=0, **k):
+        if "_delay" in k:
+            del k["_delay"]
+
+        if _delay >= 0:
+            event = self._make_event(function, *a, **k)
+            self._queue.enqueue(event, delay=_delay)
+        else:
+            raise ValueError("'delay' must be a non-negative number!")
 
