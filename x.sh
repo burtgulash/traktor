@@ -1,18 +1,29 @@
 #!/bin/bash
 
-COMMANDS="try test"
+COMMANDS="try test run"
 
 command=${1}
+shift
+
+
+with_pythonpath () {
+    old_pythonpath=${PYTHONPATH}
+    export PYTHONPATH=${PYTHONPATH}:$(pwd)
+    python3 $1
+    export PYTHONPATH=${old_pythonpath}
+}
+
 
 case ${command} in
 "test")
     python3 -m pytest test ;;
 
 "try")
-    old_pythonpath=${PYTHONPATH}
-    export PYTHONPATH=${PYTHONPATH}:$(pwd)
-    python3 examples/try.py
-    export PYTHONPATH=${old_pythonpath}
+    with_pythonpath examples/try.py
+    ;;
+
+"run")
+    with_pythonpath $1
     ;;
 
 

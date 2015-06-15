@@ -18,7 +18,7 @@ class AMeta(type):
 
         for base in bases:
             if hasattr(base, "_registered_amethods"):
-                for name, func in base._registered_amethods:
+                for func in base._registered_amethods:
                     amethods.append(func)
 
         amethod = AMeta.amethod_decorator(amethods)
@@ -71,6 +71,10 @@ class AObject(Enablable, metaclass=AMeta):
     def __init__(self):
         super().__init__()
 
+        self.name = "{} #{}".format(self.cls_name, self.__class__._ids)
+        self.__class__._ids += 1
+
+        self._methods = {}
         self._amethods = {}
         self.__container = None
 
@@ -83,24 +87,37 @@ class AObject(Enablable, metaclass=AMeta):
             if not method:
                 method = func.__get__(self, type(self))
 
-            self._amethods[method_name] = self._make_wrapper(method)
+            method = self._wrap(method)
+            self._methods[method_name] = method
+            self._amethods[method_name] = self.__make_lexical_wrapper(method, method_name)
 
-    # Python closures are lexically scoped. Create a scope around
-    # 'method.__name__' so that it does not confuses method_name within the for
-    # loop scope
-    def _make_wrapper(self, method):
+    def _wrap(self, method):
+        return method
+
+    def __make_lexical_wrapper(self, method, method_name):
+        """ Python closures are lexically scoped. Create a scope around
+        'method.__name__' so that it does not confuses method_name within the
+        for loop scope. 
+        """
         @functools.wraps(method)
-        def amethod_wrap(*a, **k):
-            self.acall(method.__name__, *a, **k)
-        return amethod_wrap
+        def acall_wrap(*a, **k):
+            self.acall(method_name, *a, **k)
+        return acall_wrap
 
     def acall(self, method_name, *a, **k):
         """ acall is an asynchronous invocation of method with name
         'method_name'.
         """
-        method = super().__getattribute__(method_name)
+        method = self.__get_method(method_name)
         item = (method, a, k)
         self._enqueue(item)
+
+    def __get_method(self, method_name):
+        try:
+            return self._methods[method_name]
+        except KeyError:
+            raise AttributeError("AObject '{}' doesn't have amethod '{}'!".
+                    format(self.__class__.__name__, method_name))
 
     def _process(self, item):
         method, a, k = item
@@ -113,6 +130,9 @@ class AObject(Enablable, metaclass=AMeta):
     def stop(self):
         self.deactivate()
         self.__container = None
+
+    def get_container(self):
+        return self.__container
 
     def __getattribute__(self, attr):
         """ Override default attribute getter so that getting methods
@@ -128,5 +148,8 @@ class AObject(Enablable, metaclass=AMeta):
             return amethods[attr]
         else:
             return super().__getattribute__(attr)
+
+    def __repr__(self):
+        return "{" + self.name + "}"
 
 
