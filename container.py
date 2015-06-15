@@ -1,4 +1,6 @@
+import collections
 import queue
+
 
 class SkipQueue(queue.Queue):
     """ Implementation of blocking queue which can queue urgent items to the

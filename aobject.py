@@ -1,15 +1,14 @@
 import functools
 
+
 class AMeta(type):
 
     @staticmethod
     def amethod_decorator(amethods):
-        def bake_in(amethod_name):
-            def decorator(func):
-                amethods.append((amethod_name, func))
-                return amethod
-            return decorator
-        return bake_in
+        def decorator(func):
+            amethods.append(func)
+            return func
+        return decorator
 
     # Register 'handler_for' decorator and make it put all recognized handlers
     # to class attribute "process_handlers". Handlers will then be registered in
@@ -20,17 +19,17 @@ class AMeta(type):
         for base in bases:
             if hasattr(base, "_registered_amethods"):
                 for name, func in base._registered_amethods:
-                    amethods.append((name, func))
+                    amethods.append(func)
 
-        decorator = AMeta.amethod_decorator(amethods)
+        amethod = AMeta.amethod_decorator(amethods)
 
         return {"_registered_amethods": amethods,
-                "amethod": decorator,
+                "amethod": amethod,
                 "cls_name": name,
                 "_ids": 0}
 
 
-class Enablable(object):
+class Enablable:
 
     def __init__(self):
         self.__active = False
@@ -68,22 +67,24 @@ class AObject(Enablable, metaclass=AMeta):
 
     def __init__(self):
         super().__init__()
-        self.__amethods = {}
+
+        self._amethods = {}
         self.__container = None
 
-        for amethod_name, func in self._registered_amethods:
+        for func in self._registered_amethods:
             # Preferably get overriden method by name from instance
-            method = getattr(self, method.__name__, None)
+            name = func.__name__
+            method = getattr(self, name, None)
 
             # Method is private, turn function into method
             if not method:
                 method = func.__get__(self, type(self))
 
             @functools.wraps(method)
-            def amethod(self, *a, **k):
+            def amethod_wrap(self, *a, **k):
                 self.acall(method, *k, **k)
 
-            self.__amethods[method.__name__] = amethod
+            self._amethods[name] = amethod_wrap
 
     def acall(self, method, *a, **k):
         item = (method, a, k)
@@ -94,8 +95,17 @@ class AObject(Enablable, metaclass=AMeta):
         self.__container.invoke(method, *a, **k)
 
     def __getattribute__(self, attr):
-        if attr in self.__amethods:
-            return self.__amethods[attr]
+        try:
+            amethods = super().__getattribute__("_amethods")
+        except AttributeError:
+            return super().__getattribute__(attr)
+
+        if attr in amethods:
+            try:
+                return amethods[attr]
+            except KeyError:
+                name = super().__getattribute__("__class__").__name__
+                raise KeyError("Amethod '{}' not found in object '{}'".format(attr, name))
         else:
             return super().__getattribute__(attr)
 
