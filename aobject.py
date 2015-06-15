@@ -1,6 +1,5 @@
 import functools
 
-
 class AMeta(type):
 
     @staticmethod
