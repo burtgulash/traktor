@@ -6,7 +6,7 @@ class AMeta(type):
     @staticmethod
     def amethod_decorator(amethods):
         def decorator(func):
-            amethods.append(func)
+            amethods[func.__name__] = func
             return func
         return decorator
 
@@ -14,12 +14,14 @@ class AMeta(type):
     # to class attribute "process_handlers". Handlers will then be registered in
     # __init__ of each class when even overriden methods are known.
     def __prepare__(name, bases):
-        amethods = []
+        amethods = {}
 
-        for base in bases:
+        # Reverse the bases so that the most overriden methods will be chosen
+        # as an amethod
+        for base in bases[::-1]:
             if hasattr(base, "_registered_amethods"):
-                for func in base._registered_amethods:
-                    amethods.append(func)
+                for name, func in base._registered_amethods.items():
+                    amethods[name] = func
 
         amethod = AMeta.amethod_decorator(amethods)
 
@@ -78,9 +80,8 @@ class AObject(Enablable, metaclass=AMeta):
         self._amethods = {}
         self.__container = None
 
-        for func in self._registered_amethods:
+        for method_name, func in self._registered_amethods.items():
             # Preferably get overriden method by name from instance
-            method_name = func.__name__
             method = getattr(self, method_name, None)
 
             # Method is private, turn function into method
