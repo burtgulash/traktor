@@ -81,14 +81,14 @@ class AObject(Enablable, metaclass=AMeta):
                 method = func.__get__(self, type(self))
 
             @functools.wraps(method)
-            def amethod_wrap(self, *a, **k):
+            def amethod_wrap(*a, **k):
                 self.acall(method, *k, **k)
 
             self._amethods[name] = amethod_wrap
 
     def acall(self, method, *a, **k):
         item = (method, a, k)
-        self._queue(item)
+        self._enqueue(item)
 
     def _process(self, item):
         method, a, k = item
@@ -101,11 +101,7 @@ class AObject(Enablable, metaclass=AMeta):
             return super().__getattribute__(attr)
 
         if attr in amethods:
-            try:
-                return amethods[attr]
-            except KeyError:
-                name = super().__getattribute__("__class__").__name__
-                raise KeyError("Amethod '{}' not found in object '{}'".format(attr, name))
+            return amethods[attr]
         else:
             return super().__getattribute__(attr)
 

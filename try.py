@@ -21,5 +21,6 @@ if __name__ == "__main__":
     con = Container()
     obj.start(con)
 
+    obj.print_it()
     con.start()
 
