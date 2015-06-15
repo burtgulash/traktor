@@ -73,8 +73,8 @@ class AObject(Enablable, metaclass=AMeta):
 
         for func in self._registered_amethods:
             # Preferably get overriden method by name from instance
-            name = func.__name__
-            method = getattr(self, name, None)
+            method_name = func.__name__
+            method = getattr(self, method_name, None)
 
             # Method is private, turn function into method
             if not method:
@@ -82,11 +82,12 @@ class AObject(Enablable, metaclass=AMeta):
 
             @functools.wraps(method)
             def amethod_wrap(*a, **k):
-                self.acall(method, *k, **k)
+                self.acall(method_name, *a, **k)
 
-            self._amethods[name] = amethod_wrap
+            self._amethods[method_name] = amethod_wrap
 
-    def acall(self, method, *a, **k):
+    def acall(self, method_name, *a, **k):
+        method = super().__getattribute__(method_name)
         item = (method, a, k)
         self._enqueue(item)
 

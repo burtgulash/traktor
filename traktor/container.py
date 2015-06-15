@@ -1,5 +1,6 @@
 import collections
 import queue
+import threading
 
 
 class SkipQueue(queue.Queue):
@@ -88,6 +89,5 @@ class LoopContainer(Container):
     def _react(self):
         self.__running = True
         while self.__running:
-            function = self._queue.dequeue()
-            function()
+            super()._react()
 

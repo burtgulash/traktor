@@ -11,7 +11,7 @@ class OOO(AObject):
         assert x == 1337
 
 
-if __name__ == "__main__":
+def test_amethod_call():
     obj = OOO()
 
     con = Container()
