@@ -1,7 +1,5 @@
-#!/usr/bin/python3
-
-from aobject import AObject
-from container import Container
+from traktor.aobject import AObject
+from traktor.container import Container
 
 
 class A(AObject):
