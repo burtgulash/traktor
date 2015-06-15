@@ -88,29 +88,36 @@ class AObject(Enablable, metaclass=AMeta):
                 method = func.__get__(self, type(self))
 
             method = self._wrap(method)
+            
+            # Store 'old' synchronous method here
             self._methods[method_name] = method
-            self._amethods[method_name] = self.__make_lexical_wrapper(method, method_name)
+
+            # Replace the synchronous method with wrapped asynchronous call
+            self._amethods[method_name] = self.__make_async_wrapper(method)
 
     def _wrap(self, method):
         return method
 
-    def __make_lexical_wrapper(self, method, method_name):
-        """ Python closures are lexically scoped. Create a scope around
-        'method.__name__' so that it does not confuses method_name within the
-        for loop scope. 
-        """
+    def __make_async_wrapper(self, method):
         @functools.wraps(method)
         def acall_wrap(*a, **k):
-            self.acall(method_name, *a, **k)
+            self.__async_call(method, a, k)
         return acall_wrap
+
+    def __async_call(self, method, a, k):
+        item = (method, a, k)
+        self._enqueue(item)
+
+    def _process(self, item):
+        method, a, k = item
+        self.__container.invoke(method, *a, **k)
 
     def acall(self, method_name, *a, **k):
         """ acall is an asynchronous invocation of method with name
         'method_name'.
         """
         method = self.__get_method(method_name)
-        item = (method, a, k)
-        self._enqueue(item)
+        self.__async_call(method, a, k)
 
     def __get_method(self, method_name):
         try:
@@ -119,9 +126,6 @@ class AObject(Enablable, metaclass=AMeta):
             raise AttributeError("AObject '{}' doesn't have amethod '{}'!".
                     format(self.__class__.__name__, method_name))
 
-    def _process(self, item):
-        method, a, k = item
-        self.__container.invoke(method, *a, **k)
 
     def start(self, container):
         self.__container = container
