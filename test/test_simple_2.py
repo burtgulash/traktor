@@ -49,7 +49,8 @@ def test_timer_function_call():
     obj.start(con)
 
     obj.tryit(1337)
-    obj.finish(_delay=.5)
+    obj.tryit(1337)
+    obj.finish(_delay=.005)
 
     wait = queue.Queue()
     con.spawn(wait)

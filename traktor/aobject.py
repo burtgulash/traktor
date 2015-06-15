@@ -64,6 +64,9 @@ class Enablable:
 
 
 class AObject(Enablable, metaclass=AMeta):
+    """ AObject stands for asynchronous object. It is a normal object, but has
+    a decorator @amethod which can turn its method into asynchronous method.
+    """
 
     def __init__(self):
         super().__init__()
@@ -92,6 +95,9 @@ class AObject(Enablable, metaclass=AMeta):
             self._amethods[method_name] = make_wrapper(method_name)
 
     def acall(self, method_name, *a, **k):
+        """ acall is an asynchronous invocation of method with name
+        'method_name'.
+        """
         method = super().__getattribute__(method_name)
         item = (method, a, k)
         self._enqueue(item)
@@ -100,7 +106,19 @@ class AObject(Enablable, metaclass=AMeta):
         method, a, k = item
         self.__container.invoke(method, *a, **k)
 
+    def start(self, container):
+        self.__container = container
+        self.activate()
+
+    def stop(self):
+        self.deactivate()
+        self.__container = None
+
     def __getattribute__(self, attr):
+        """ Override default attribute getter so that getting methods
+        registered with decorator @amethod will return wrapper which calls the
+        method asynchronously - ie. enqueues the function to container's queue.
+        """
         try:
             amethods = super().__getattribute__("_amethods")
         except AttributeError:
@@ -110,13 +128,5 @@ class AObject(Enablable, metaclass=AMeta):
             return amethods[attr]
         else:
             return super().__getattribute__(attr)
-
-    def start(self, container):
-        self.__container = container
-        self.activate()
-
-    def stop(self):
-        self.deactivate()
-        self.__container = None
 
 
