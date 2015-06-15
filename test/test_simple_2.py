@@ -13,7 +13,7 @@ class OOO(AObject):
         assert x == 1337
 
     @amethod
-    def end(self):
+    def finish(self):
         raise Done
 
 
@@ -24,14 +24,11 @@ def test_loop_function_call():
     con = LoopContainer()
     obj.start(con)
 
-    #obj.tryit(1337)
-    #obj.tryit(1337)
-    #obj.tryit(1337)
-    #obj.end()
+    obj.tryit(1337)
     obj.acall("tryit", 1337)
-    obj.acall("tryit", 1337)
-    obj.acall("tryit", 1337)
-    obj.acall("end")
+    obj.tryit(1337)
+    obj.finish()
+
 
     wait = queue.Queue()
     con.spawn(wait)
@@ -41,8 +38,6 @@ def test_loop_function_call():
         raise result
     except Done:
         pass
-    except:
-        raise
 
     assert True
 

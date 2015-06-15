@@ -27,6 +27,46 @@ class SkipQueue(queue.Queue):
             self.queue.append(x)
 
 
+class TimedQueue(SkipQueue):
+
+    def __init__(self):
+        super().__init__()
+        self.delayed = []
+        self._WAIT = .1
+
+    def enqueue(self, x, delay=0):
+        deadline = time.time() + delay
+        super().enqueue((deadline, delay, x), urgent=delay > 0)
+
+    def dequeue(self, block=True, timeout=None):
+        while True:
+            now = time.time()
+            timeout = self._WAIT
+
+            if self.delayed:
+                nearest = self.delayed[0]
+                timeout = max(0, nearest[0] - now)
+
+            try:
+                deadline, delay, x = super().dequeue(block=block, timeout=timeout)
+            except queue.Empty:
+                if not block:
+                    raise
+            else:
+                if delay > 0:
+                    heapq.heappush(self.delayed, (deadline, x))
+                else:
+                    return x
+
+            delayed = []
+            while self.delayed and self.delayed[0][0] <= now:
+                delay, x = heapq.heappop(self.delayed)
+                delayed.append(x)
+            while delayed:
+                x = delayed.pop()
+                super().enqueue((0, 0, x))
+
+
 class Done(Exception): pass
 
 class Container:

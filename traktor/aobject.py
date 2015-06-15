@@ -80,11 +80,16 @@ class AObject(Enablable, metaclass=AMeta):
             if not method:
                 method = func.__get__(self, type(self))
 
-            @functools.wraps(method)
-            def amethod_wrap(*a, **k):
-                self.acall(method_name, *a, **k)
+            # Python closures are lexically scoped. Create a scope around
+            # 'method_name' so that it does not confuses method_name within the
+            # for loop scope
+            def make_wrapper(method_name):
+                @functools.wraps(method)
+                def amethod_wrap(*a, **k):
+                    self.acall(method_name, *a, **k)
+                return amethod_wrap
 
-            self._amethods[method_name] = amethod_wrap
+            self._amethods[method_name] = make_wrapper(method_name)
 
     def acall(self, method_name, *a, **k):
         method = super().__getattribute__(method_name)
